@@ -1,12 +1,12 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import pino from 'pino-http';
+import pinoHttp from 'pino-http';
 
 dotenv.config();
 
 const app = express();
-const logger = pino({
+const logger = pinoHttp({
   transport: {
     target: 'pino-pretty',
   },
@@ -28,8 +28,8 @@ app.get('/notes/:noteId', (req, res) => {
   });
 });
 
-app.get('/test-error', () => {
-  throw new Error('Simulated server error');
+app.get('/test-error', (req, res, next) => {
+  next(new Error('Simulated server error'));
 });
 
 app.use((req, res) => {
