@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { celebrate } from 'celebrate';
+import { celebrate, Segments } from 'celebrate';
 import * as notesController from '../controllers/notesController.js';
 import * as schemas from '../validations/notesValidation.js';
 import { authenticate } from '../middleware/authenticate.js';
@@ -8,33 +8,32 @@ const router = Router();
 
 router.use(authenticate);
 
-router.get(
-  '/notes',
-  celebrate(schemas.getAllNotesSchema),
+// ВАЖЛИВО: вказуємо, яку частину запиту валідуємо (query, params або body)
+router.get('/notes',
+  celebrate({ [Segments.QUERY]: schemas.getAllNotesSchema }),
   notesController.getAllNotes
 );
 
-router.get(
-  '/notes/:noteId',
-  celebrate(schemas.noteIdSchema),
+router.get('/notes/:noteId',
+  celebrate({ [Segments.PARAMS]: schemas.noteIdSchema }),
   notesController.getNoteById
 );
 
-router.post(
-  '/notes',
-  celebrate(schemas.createNoteSchema),
+router.post('/notes',
+  celebrate({ [Segments.BODY]: schemas.createNoteSchema }),
   notesController.createNote
 );
 
-router.patch(
-  '/notes/:noteId',
-  celebrate(schemas.updateNoteSchema),
+router.patch('/notes/:noteId',
+  celebrate({
+    [Segments.PARAMS]: schemas.noteIdSchema,
+    [Segments.BODY]: schemas.updateNoteSchema
+  }),
   notesController.updateNote
 );
 
-router.delete(
-  '/notes/:noteId',
-  celebrate(schemas.noteIdSchema),
+router.delete('/notes/:noteId',
+  celebrate({ [Segments.PARAMS]: schemas.noteIdSchema }),
   notesController.deleteNote
 );
 
