@@ -8,15 +8,25 @@ export const getAllNotes = async (req, res, next) => {
     const limit = parseInt(perPage);
     const skip = (parseInt(page) - 1) * limit;
 
-    const filter = {};
-    if (tag) filter.tag = tag;
-    if (search) filter.$text = { $search: search };
+    // Створюємо базовий запит через ланцюжок методів Mongoose
+    const notesQuery = Note.find();
 
-    const totalNotes = await Note.countDocuments(filter);
-    const notes = await Note.find(filter)
-      .skip(skip)
-      .limit(limit)
-      .sort({ createdAt: -1 }); // Сортування від нових до старих
+    if (tag) {
+      notesQuery.where('tag').equals(tag);
+    }
+
+    if (search) {
+      notesQuery.where({ $text: { $search: search } });
+    }
+
+    // Створюємо окремий запит для підрахунку з тими ж фільтрами
+    const countQuery = Note.countDocuments(notesQuery.getFilter());
+
+    // Виконуємо обидва запити паралельно через Promise.all
+    const [totalNotes, notes] = await Promise.all([
+      countQuery,
+      notesQuery.skip(skip).limit(limit).sort({ createdAt: -1 }).exec(),
+    ]);
 
     const totalPages = Math.ceil(totalNotes / limit);
 

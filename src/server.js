@@ -16,17 +16,14 @@ app.use(logger);
 app.use(cors());
 app.use(express.json());
 
-// Використовуємо префікс /notes тут, щоб у роутах було просто "/"
-app.use('/notes', notesRoutes);
+// Реєструємо роутер БЕЗ префікса /notes, бо він прописаний у самому роутері
+app.use(notesRoutes);
 
 app.use(notFoundHandler);
-
-// ОБОВ'ЯЗКОВО: обробник помилок celebrate має бути ПЕРЕД твоїм errorHandler
 app.use(errors());
-
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3030;
 
 const startServer = async () => {
   try {
