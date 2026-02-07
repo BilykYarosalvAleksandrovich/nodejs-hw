@@ -1,10 +1,12 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser'; // Додано
 import { errors } from 'celebrate';
 
 import { connectMongoDB } from './db/connectMongoDB.js';
 import notesRoutes from './routes/notesRoutes.js';
+import authRoutes from './routes/authRoutes.js'; // Додано
 
 import { logger } from './middleware/logger.js';
 import { notFoundHandler } from './middleware/notFoundHandler.js';
@@ -15,15 +17,15 @@ const app = express();
 app.use(logger);
 app.use(cors());
 app.use(express.json());
+app.use(cookieParser()); // ОБОВ'ЯЗКОВО для роботи з сесіями
 
-// Реєструємо без префікса /notes, бо він є в роутері
-app.use(notesRoutes);
+app.use('/auth', authRoutes); // Маршрути аутентифікації
+app.use('/notes', notesRoutes); // Маршрути нотаток
 
 app.use(notFoundHandler);
 app.use(errors());
 app.use(errorHandler);
 
-// Виправлено порт за замовчуванням на 3000
 const PORT = process.env.PORT || 3000;
 
 const startServer = async () => {
