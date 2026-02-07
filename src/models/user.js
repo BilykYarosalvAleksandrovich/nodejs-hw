@@ -9,14 +9,12 @@ const userSchema = new Schema(
   { timestamps: true, versionKey: false }
 );
 
-// Видаляємо пароль при перетворенні в JSON
 userSchema.methods.toJSON = function () {
   const obj = this.toObject();
   delete obj.password;
   return obj;
 };
 
-// Встановлюємо username як email перед збереженням, якщо він відсутній
 userSchema.pre('save', function (next) {
   if (!this.username) {
     this.username = this.email;
@@ -24,4 +22,4 @@ userSchema.pre('save', function (next) {
   next();
 });
 
-export const User = model('user', userSchema);
+export const User = model('User', userSchema);

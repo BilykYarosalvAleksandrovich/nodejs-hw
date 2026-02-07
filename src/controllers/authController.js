@@ -33,6 +33,8 @@ export const loginUser = async (req, res, next) => {
       throw createHttpError(401, 'Invalid credentials');
     }
 
+    await Session.deleteMany({ userId: user._id });
+
     const session = await createSession(user._id);
     setSessionCookies(res, session);
     res.status(200).json(user);
