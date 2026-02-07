@@ -16,14 +16,15 @@ app.use(logger);
 app.use(cors());
 app.use(express.json());
 
-// Реєструємо роутер БЕЗ префікса /notes, бо він прописаний у самому роутері
+// Реєструємо без префікса /notes, бо він є в роутері
 app.use(notesRoutes);
 
 app.use(notFoundHandler);
 app.use(errors());
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 3030;
+// Виправлено порт за замовчуванням на 3000
+const PORT = process.env.PORT || 3000;
 
 const startServer = async () => {
   try {
