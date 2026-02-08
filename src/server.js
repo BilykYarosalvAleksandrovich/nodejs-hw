@@ -20,13 +20,13 @@ app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
 
-// Реєстрація роутів
-app.use('/auth', authRoutes);
-app.use('/notes', notesRoutes);
-app.use('/users', userRoutes);
+// Реєструємо роутери БЕЗ префіксів
+app.use(authRoutes);
+app.use(notesRoutes);
+app.use(userRoutes);
 
 app.use(notFoundHandler);
-app.use(errors()); // Обробка помилок celebrate
+app.use(errors());
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;

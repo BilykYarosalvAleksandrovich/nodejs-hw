@@ -10,15 +10,21 @@ import { Session } from '../models/session.js';
 import { sendEmail } from '../utils/sendMail.js';
 import { createSession, setSessionCookies } from '../services/auth.js';
 
-// --- Існуючі контролери ---
 export const registerUser = async (req, res, next) => {
   try {
     const { email, password } = req.body;
     const existingUser = await User.findOne({ email });
-    if (existingUser) throw createHttpError(409, 'Email in use');
+    if (existingUser) {
+      throw createHttpError(400, 'Email in use'); // Виправлено статус на 400
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({ ...req.body, password: hashedPassword });
+
+    // Створюємо сесію відразу після реєстрації
+    const session = await createSession(user._id);
+    setSessionCookies(res, session);
+
     res.status(201).json(user);
   } catch (error) {
     next(error);
@@ -32,9 +38,11 @@ export const loginUser = async (req, res, next) => {
     if (!user || !(await bcrypt.compare(password, user.password))) {
       throw createHttpError(401, 'Invalid credentials');
     }
+
     await Session.deleteMany({ userId: user._id });
     const session = await createSession(user._id);
     setSessionCookies(res, session);
+
     res.status(200).json(user);
   } catch (error) {
     next(error);
@@ -43,11 +51,13 @@ export const loginUser = async (req, res, next) => {
 
 export const logoutUser = async (req, res, next) => {
   try {
-    if (req.cookies.refreshToken) {
-      await Session.deleteOne({ refreshToken: req.cookies.refreshToken });
+    const { sessionId } = req.cookies;
+    if (sessionId) {
+      await Session.deleteOne({ _id: sessionId });
     }
     res.clearCookie('accessToken');
     res.clearCookie('refreshToken');
+    res.clearCookie('sessionId'); // Очищення кукі sessionId
     res.status(204).send();
   } catch (error) {
     next(error);
@@ -56,19 +66,36 @@ export const logoutUser = async (req, res, next) => {
 
 export const refreshUserSession = async (req, res, next) => {
   try {
-    const session = await createSession(req.user._id); // Логіка сервісу
-    setSessionCookies(res, session);
-    res.status(200).json({ message: 'Session refreshed' });
+    const { sessionId, refreshToken } = req.cookies;
+
+    if (!sessionId || !refreshToken) {
+      throw createHttpError(401, 'Session not found');
+    }
+
+    const session = await Session.findOne({ _id: sessionId, refreshToken });
+    if (!session) {
+      throw createHttpError(401, 'Session not found');
+    }
+
+    if (new Date() > new Date(session.refreshTokenValidUntil)) {
+      throw createHttpError(401, 'Refresh token expired');
+    }
+
+    const userId = session.userId;
+    await Session.deleteOne({ _id: sessionId }); // Видаляємо стару сесію
+
+    const newSession = await createSession(userId);
+    setSessionCookies(res, newSession);
+
+    res.status(200).json({ accessToken: newSession.accessToken });
   } catch (error) {
     next(error);
   }
 };
 
-// --- Скидання пароля ---
 export const requestResetEmail = async (req, res, next) => {
   const { email } = req.body;
   const user = await User.findOne({ email });
-
   if (!user) {
     return res
       .status(200)
@@ -91,12 +118,11 @@ export const requestResetEmail = async (req, res, next) => {
     });
 
     await sendEmail({
-      from: process.env.SMTP_FROM, // Явно вказуємо відправника
+      from: process.env.SMTP_FROM,
       to: email,
       subject: 'Reset your password',
       html,
     });
-
     res.status(200).json({ message: 'Password reset email sent successfully' });
   } catch (error) {
     next(
@@ -108,7 +134,14 @@ export const requestResetEmail = async (req, res, next) => {
 export const resetPassword = async (req, res, next) => {
   const { token, password } = req.body;
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+      // Будь-яка помилка токена (expire, invalid, malformed) стає 401
+      throw createHttpError(401, 'Invalid or expired token');
+    }
+
     const user = await User.findOne({ _id: decoded.sub, email: decoded.email });
     if (!user) throw createHttpError(404, 'User not found');
 
@@ -116,10 +149,6 @@ export const resetPassword = async (req, res, next) => {
     await user.save();
     res.status(200).json({ message: 'Password reset successfully' });
   } catch (error) {
-    next(
-      error.name === 'TokenExpiredError'
-        ? createHttpError(401, 'Token expired')
-        : error
-    );
+    next(error);
   }
 };
