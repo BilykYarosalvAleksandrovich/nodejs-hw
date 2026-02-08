@@ -5,13 +5,13 @@ import cookieParser from 'cookie-parser';
 import { errors } from 'celebrate';
 
 import { connectMongoDB } from './db/connectMongoDB.js';
-import notesRoutes from './routes/notesRoutes.js';
 import authRoutes from './routes/authRoutes.js';
+import notesRoutes from './routes/notesRoutes.js';
+import userRoutes from './routes/userRoutes.js';
 
 import { logger } from './middleware/logger.js';
 import { notFoundHandler } from './middleware/notFoundHandler.js';
 import { errorHandler } from './middleware/errorHandler.js';
-import userRoutes from './routes/userRoutes.js';
 
 const app = express();
 
@@ -20,12 +20,13 @@ app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
 
-// Реєструємо без префіксів у параметрах .use()
+// Реєстрація роутів
 app.use('/auth', authRoutes);
+app.use('/notes', notesRoutes);
 app.use('/users', userRoutes);
 
 app.use(notFoundHandler);
-app.use(errors());
+app.use(errors()); // Обробка помилок celebrate
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
