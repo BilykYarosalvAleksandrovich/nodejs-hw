@@ -15,13 +15,12 @@ export const registerUser = async (req, res, next) => {
     const { email, password } = req.body;
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      throw createHttpError(400, 'Email in use'); // Виправлено статус на 400
+      throw createHttpError(400, 'Email in use');
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({ ...req.body, password: hashedPassword });
 
-    // Створюємо сесію відразу після реєстрації
     const session = await createSession(user._id);
     setSessionCookies(res, session);
 
@@ -57,13 +56,14 @@ export const logoutUser = async (req, res, next) => {
     }
     res.clearCookie('accessToken');
     res.clearCookie('refreshToken');
-    res.clearCookie('sessionId'); // Очищення кукі sessionId
+    res.clearCookie('sessionId');
     res.status(204).send();
   } catch (error) {
     next(error);
   }
 };
 
+// --- ВИПРАВЛЕНИЙ КОНТРОЛЕР ТУТ ---
 export const refreshUserSession = async (req, res, next) => {
   try {
     const { sessionId, refreshToken } = req.cookies;
@@ -82,12 +82,15 @@ export const refreshUserSession = async (req, res, next) => {
     }
 
     const userId = session.userId;
-    await Session.deleteOne({ _id: sessionId }); // Видаляємо стару сесію
+    await Session.deleteOne({ _id: sessionId });
 
     const newSession = await createSession(userId);
     setSessionCookies(res, newSession);
 
-    res.status(200).json({ accessToken: newSession.accessToken });
+    // Змінено з повернення токена на JSON-повідомлення
+    res.status(200).json({
+      message: 'Successfully refreshed session!',
+    });
   } catch (error) {
     next(error);
   }
@@ -138,7 +141,6 @@ export const resetPassword = async (req, res, next) => {
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
     } catch (err) {
-      // Будь-яка помилка токена (expire, invalid, malformed) стає 401
       throw createHttpError(401, 'Invalid or expired token');
     }
 
