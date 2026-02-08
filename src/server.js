@@ -11,6 +11,7 @@ import authRoutes from './routes/authRoutes.js';
 import { logger } from './middleware/logger.js';
 import { notFoundHandler } from './middleware/notFoundHandler.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import userRoutes from './routes/userRoutes.js';
 
 const app = express();
 
@@ -20,8 +21,8 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Реєструємо без префіксів у параметрах .use()
-app.use(authRoutes);
-app.use(notesRoutes);
+app.use('/auth', authRoutes);
+app.use('/users', userRoutes);
 
 app.use(notFoundHandler);
 app.use(errors());
